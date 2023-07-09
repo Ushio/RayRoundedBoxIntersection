@@ -93,42 +93,46 @@ bool intersectRoundedbox( glm::vec3 ro, glm::vec3 rd, glm::vec3 center, glm::vec
 	glm::vec3 rd2 = rd * rd;
 
 	float t = FLT_MAX;
-	{ // corner sphere 1
-		float a = rd2.x + rd2.y + rd2.z;
-		float b = rpoxrd2.x + rpoxrd2.y + rpoxrd2.z;
-		float c = rpo2.x + rpo2.y + rpo2.z - R2;
-		float D = b * b - a * c;
-		if( 0.0f < D )
-		{
-			float h = ( -b - sqrtf( D ) ) / a;
-			glm::vec3 p = ro + rd * h - center;
-			if( 0.0f < h && 0.0f <= minElement( glm::abs( p ) - innerWide ) /* leave only the corners, inclusive */ )
-			{
-				t = h;
-			}
-		}
-	}
 
-	for( glm::vec3 flipper : { glm::vec3{ -1.0f, 1.0f, 1.0f }, glm::vec3{ 1.0f, -1.0f, 1.0f }, glm::vec3{ 1.0f, 1.0f, -1.0f } } )
-	{ // corner sphere 2 ( 3 other potential spheres )
-		glm::vec3 rpo = ro - ( oLocal * flipper + center );
-		glm::vec3 rpo2 = rpo * rpo;
-		glm::vec3 rpoxrd2 = rpo * rd;
+	// Brute force approach 4 spheres:
+	//{ // corner sphere 1
+	//	float a = rd2.x + rd2.y + rd2.z;
+	//	float b = rpoxrd2.x + rpoxrd2.y + rpoxrd2.z;
+	//	float c = rpo2.x + rpo2.y + rpo2.z - R2;
+	//	float D = b * b - a * c;
+	//	if( 0.0f < D )
+	//	{
+	//		float h = ( -b - sqrtf( D ) ) / a;
+	//		glm::vec3 p = ro + rd * h - center;
+	//		if( 0.0f < h && 0.0f <= minElement( glm::abs( p ) - innerWide ) /* leave only the corners, inclusive */ )
+	//		{
+	//			t = h;
+	//		}
+	//	}
+	//}
+	//for( glm::vec3 flipper : { glm::vec3{ -1.0f, 1.0f, 1.0f }, glm::vec3{ 1.0f, -1.0f, 1.0f }, glm::vec3{ 1.0f, 1.0f, -1.0f } } )
+	//{ // corner sphere 2 ( 3 other potential spheres )
+	//	glm::vec3 rpo = ro - ( oLocal * flipper + center );
+	//	glm::vec3 rpo2 = rpo * rpo;
+	//	glm::vec3 rpoxrd2 = rpo * rd;
 
-		float a = rd2.x + rd2.y + rd2.z;
-		float b = rpoxrd2.x + rpoxrd2.y + rpoxrd2.z;
-		float c = rpo2.x + rpo2.y + rpo2.z - R2;
-		float D = b * b - a * c;
-		if( 0.0f < D )
-		{
-			float h = ( -b - sqrtf( D ) ) / a;
-			glm::vec3 p = ro + rd * h - center;
-			if( 0.0f < h && h < t && 0.0f <= minElement( glm::abs( p ) - innerWide ) /* leave only the corners, inclusive */ )
-			{
-				t = h;
-			}
-		}
-	}
+	//	float a = rd2.x + rd2.y + rd2.z;
+	//	float b = rpoxrd2.x + rpoxrd2.y + rpoxrd2.z;
+	//	float c = rpo2.x + rpo2.y + rpo2.z - R2;
+	//	float D = b * b - a * c;
+	//	if( 0.0f < D )
+	//	{
+	//		float h = ( -b - sqrtf( D ) ) / a;
+	//		glm::vec3 p = ro + rd * h - center;
+	//		if( 0.0f < h && h < t && 0.0f <= minElement( glm::abs( p ) - innerWide ) /* leave only the corners, inclusive */ )
+	//		{
+	//			t = h;
+	//		}
+	//	}
+	//}
+
+	// if you find an intersection on the other side of oLocal on the cylinders, it means sphere is on the side. So that you must flip it. 
+	glm::vec3 flipper = { 1, 1, 1 };
 
 	{ // XY
 		float a = rd2.x + rd2.y;
@@ -146,6 +150,8 @@ bool intersectRoundedbox( glm::vec3 ro, glm::vec3 rd, glm::vec3 center, glm::vec
 			{
 				t = h;
 			}
+
+			flipper.z = glm::sign( z - center.z ) * glm::sign( oLocal.z );
 		}
 	}
 	{ // YZ
@@ -164,6 +170,8 @@ bool intersectRoundedbox( glm::vec3 ro, glm::vec3 rd, glm::vec3 center, glm::vec
 			{
 				t = h;
 			}
+
+			flipper.x = glm::sign( x - center.x ) * glm::sign( oLocal.x );
 		}
 	}
 	{ // ZX
@@ -179,6 +187,28 @@ bool intersectRoundedbox( glm::vec3 ro, glm::vec3 rd, glm::vec3 center, glm::vec
 				innerWide.x < glm::abs( ro.x + rd.x * h - center.x ) &&
 				innerWide.z < glm::abs( ro.z + rd.z * h - center.z );
 			if( 0.0f < h && h < t && glm::abs( y - center.y ) < innerWide.y && isCorner /* leave only the corners */ )
+			{
+				t = h;
+			}
+			flipper.y = glm::sign( y - center.y ) * glm::sign( oLocal.y );
+		}
+	}
+
+	{ // corner sphere 
+		glm::vec3 rpo = ro - ( oLocal * flipper + center );
+
+		glm::vec3 rpo2 = rpo * rpo;
+		glm::vec3 rpoxrd2 = rpo * rd;
+
+		float a = rd2.x + rd2.y + rd2.z;
+		float b = rpoxrd2.x + rpoxrd2.y + rpoxrd2.z;
+		float c = rpo2.x + rpo2.y + rpo2.z - R2;
+		float D = b * b - a * c;
+		if( 0.0f < D )
+		{
+			float h = ( -b - sqrtf( D ) ) / a;
+			glm::vec3 p = ro + rd * h - center;
+			if( 0.0f < h && h < t && 0.0f <= minElement( glm::abs( p ) - innerWide ) /* leave only the corners, inclusive */ )
 			{
 				t = h;
 			}
@@ -245,6 +275,11 @@ int main()
 
 		static float Z = 0.0f;
 		static float Y = -1.5f;
+		static float X = 0;
+		static float w = 1;
+
+		static int debugX = 1000;
+		static int debugY = 500;
 
 		static glm::vec3 lower = { -0.5f, -0.5f, -0.5f };
 		static glm::vec3 upper = { 0.5f, 0.5f, 0.5f };
@@ -256,10 +291,10 @@ int main()
 		for( int i = 0; i < 1000; i++ )
 		{
 			glm::vec3 ro = {
-				glm::mix( -4.0f, 1.0f, rng.uniformf() ),
+				X + glm::mix( -4.0f, 1.0f, rng.uniformf() * w ),
 				Y,
 				Z };
-			glm::vec3 rd = { 1, 1, 0.0f };
+			glm::vec3 rd = { 0.08f, 1, 0.08f };
 			float t = FLT_MAX;
 
 			glm::vec3 one_over_rd = glm::vec3{ 1.0f, 1.0f, 1.0f } / rd;
@@ -325,13 +360,16 @@ int main()
 				{
 					image( i, j ) = { 0, 0, 0, 255 };
 				}
+
+				if( debugX == i && debugY == j )
+					image( i, j ) = { 255, 0, 0, 255 };
 			}
 		};
-		if( renderParallel )
-		{
-			ParallelFor( image.height(), renderLine );
-		}
-		else
+		//if( renderParallel )
+		//{
+		//	ParallelFor( image.height(), renderLine );
+		//}
+		//else
 		{
 			for( int j = 0; j < image.height(); ++j )
 			{
@@ -355,6 +393,9 @@ int main()
 		ImGui::SliderFloat( "R", &Radius, 0, 1 );
 		ImGui::SliderFloat( "Z", &Z, -3, 3 );
 		ImGui::SliderFloat( "Y", &Y, -3, 3 );
+		ImGui::SliderFloat( "X", &X, -3, 3 );
+		ImGui::SliderFloat( "w", &w, 0, 1 );
+		
 		ImGui::End();
 
 		EndImGui();

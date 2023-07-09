@@ -146,7 +146,7 @@ bool intersectRoundedbox( glm::vec3 ro, glm::vec3 rd, glm::vec3 center, glm::vec
 			bool isCorner =
 				innerWide.x < glm::abs( ro.x + rd.x * h - center.x ) &&
 				innerWide.y < glm::abs( ro.y + rd.y * h - center.y );
-			if( 0.0f < h && h < t && glm::abs( z - center.z ) < innerWide.z && isCorner /* leave only the corners */ )
+			if( 0.0f < h && glm::abs( z - center.z ) < innerWide.z && isCorner /* leave only the corners */ )
 			{
 				t = h;
 			}
@@ -166,7 +166,7 @@ bool intersectRoundedbox( glm::vec3 ro, glm::vec3 rd, glm::vec3 center, glm::vec
 			bool isCorner =
 				innerWide.y < glm::abs( ro.y + rd.y * h - center.y ) &&
 				innerWide.z < glm::abs( ro.z + rd.z * h - center.z );
-			if( 0.0f < h && h < t && glm::abs( x - center.x ) < innerWide.x && isCorner /* leave only the corners */ )
+			if( 0.0f < h && glm::abs( x - center.x ) < innerWide.x && isCorner /* leave only the corners */ )
 			{
 				t = h;
 			}
@@ -186,7 +186,7 @@ bool intersectRoundedbox( glm::vec3 ro, glm::vec3 rd, glm::vec3 center, glm::vec
 			bool isCorner =
 				innerWide.x < glm::abs( ro.x + rd.x * h - center.x ) &&
 				innerWide.z < glm::abs( ro.z + rd.z * h - center.z );
-			if( 0.0f < h && h < t && glm::abs( y - center.y ) < innerWide.y && isCorner /* leave only the corners */ )
+			if( 0.0f < h && glm::abs( y - center.y ) < innerWide.y && isCorner /* leave only the corners */ )
 			{
 				t = h;
 			}
@@ -208,7 +208,7 @@ bool intersectRoundedbox( glm::vec3 ro, glm::vec3 rd, glm::vec3 center, glm::vec
 		{
 			float h = ( -b - sqrtf( D ) ) / a;
 			glm::vec3 p = ro + rd * h - center;
-			if( 0.0f < h && h < t && 0.0f <= minElement( glm::abs( p ) - innerWide ) /* leave only the corners, inclusive */ )
+			if( 0.0f < h && 0.0f <= minElement( glm::abs( p ) - innerWide ) /* leave only the corners, inclusive */ )
 			{
 				t = h;
 			}

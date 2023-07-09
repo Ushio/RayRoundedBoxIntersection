@@ -60,10 +60,13 @@ bool hasIntersectionBox( glm::vec3 ro, glm::vec3 one_over_rd, glm::vec3 lower, g
 // backface culled
 bool intersectRoundedbox( glm::vec3 ro, glm::vec3 rd, glm::vec3 center, glm::vec3 WideH, float R, float* tout, float tbox )
 {
-	glm::vec3 roLocal = ro - center;
 	glm::vec3 innerWide = WideH - glm::vec3( R, R, R );
-	glm::vec3 hitLocal = ( roLocal + rd * tbox );
+	glm::vec3 hitLocal = ( ro + rd * tbox - center );
 	glm::vec3 distanceFromInner = glm::abs( hitLocal ) - innerWide;
+	glm::vec3 roLocal = ro - center;
+
+	float shiftT = 0.0f < tbox ? tbox - maxElement( glm::abs( rd ) ) / 65536.0f : 0.0f;
+	glm::vec3 roHitLocal = ro + rd * shiftT - center;
 
 	// Plane part, inclusive
 	if( minElement( glm::max( distanceFromInner, { distanceFromInner.y, distanceFromInner.z, distanceFromInner.x } ) ) <= 0.0f )
@@ -86,7 +89,7 @@ bool intersectRoundedbox( glm::vec3 ro, glm::vec3 rd, glm::vec3 center, glm::vec
 			copysignf( innerWide.z, hitLocal.z ),
 		};
 
-	glm::vec3 rpo = roLocal - oLocal;
+	glm::vec3 rpo = roHitLocal - oLocal;
 
 	float R2 = R * R;
 	glm::vec3 rpo2 = rpo * rpo;
@@ -143,13 +146,13 @@ bool intersectRoundedbox( glm::vec3 ro, glm::vec3 rd, glm::vec3 center, glm::vec
 		if( 0.0f < D )
 		{
 			float h = ( -b - sqrtf( D ) ) / a;
-			float z = roLocal.z + rd.z * h;
+			float z = roHitLocal.z + rd.z * h;
 			bool isCorner =
-				innerWide.x < glm::abs( roLocal.x + rd.x * h ) &&
-				innerWide.y < glm::abs( roLocal.y + rd.y * h );
+				innerWide.x < glm::abs( roHitLocal.x + rd.x * h ) &&
+				innerWide.y < glm::abs( roHitLocal.y + rd.y * h );
 			if( 0.0f < h && glm::abs( z ) < innerWide.z && isCorner /* leave only the corners */ )
 			{
-				t = h;
+				t = shiftT + h;
 			}
 
 			flipper.z = glm::sign( z ) * glm::sign( oLocal.z );
@@ -163,13 +166,13 @@ bool intersectRoundedbox( glm::vec3 ro, glm::vec3 rd, glm::vec3 center, glm::vec
 		if( 0.0f < D )
 		{
 			float h = ( -b - sqrtf( D ) ) / a;
-			float x = roLocal.x + rd.x * h;
+			float x = roHitLocal.x + rd.x * h;
 			bool isCorner =
-				innerWide.y < glm::abs( roLocal.y + rd.y * h ) &&
-				innerWide.z < glm::abs( roLocal.z + rd.z * h );
+				innerWide.y < glm::abs( roHitLocal.y + rd.y * h ) &&
+				innerWide.z < glm::abs( roHitLocal.z + rd.z * h );
 			if( 0.0f < h && glm::abs( x ) < innerWide.x && isCorner /* leave only the corners */ )
 			{
-				t = h;
+				t = shiftT + h;
 			}
 
 			flipper.x = glm::sign( x ) * glm::sign( oLocal.x );
@@ -183,20 +186,20 @@ bool intersectRoundedbox( glm::vec3 ro, glm::vec3 rd, glm::vec3 center, glm::vec
 		if( 0.0f < D )
 		{
 			float h = ( -b - sqrtf( D ) ) / a;
-			float y = roLocal.y + rd.y * h;
+			float y = roHitLocal.y + rd.y * h;
 			bool isCorner =
-				innerWide.x < glm::abs( roLocal.x + rd.x * h ) &&
-				innerWide.z < glm::abs( roLocal.z + rd.z * h );
+				innerWide.x < glm::abs( roHitLocal.x + rd.x * h ) &&
+				innerWide.z < glm::abs( roHitLocal.z + rd.z * h );
 			if( 0.0f < h && glm::abs( y ) < innerWide.y && isCorner /* leave only the corners */ )
 			{
-				t = h;
+				t = shiftT + h;
 			}
 			flipper.y = glm::sign( y ) * glm::sign( oLocal.y );
 		}
 	}
 
 	{ // corner sphere 
-		glm::vec3 rpo = roLocal - oLocal * flipper;
+		glm::vec3 rpo = roHitLocal - oLocal * flipper;
 
 		glm::vec3 rpo2 = rpo * rpo;
 		glm::vec3 rpoxrd2 = rpo * rd;
@@ -208,10 +211,10 @@ bool intersectRoundedbox( glm::vec3 ro, glm::vec3 rd, glm::vec3 center, glm::vec
 		if( 0.0f < D )
 		{
 			float h = ( -b - sqrtf( D ) ) / a;
-			glm::vec3 p = roLocal + rd * h;
+			glm::vec3 p = roHitLocal + rd * h;
 			if( 0.0f < h && 0.0f <= minElement( glm::abs( p ) - innerWide ) /* leave only the corners, inclusive */ )
 			{
-				t = h;
+				t = shiftT + h;
 			}
 		}
 	}
@@ -391,6 +394,8 @@ int main()
 		ImGui::SetNextWindowSize( { 500, 800 }, ImGuiCond_Once );
 		ImGui::Begin( "Panel" );
 		ImGui::Text( "fps = %f", GetFrameRate() );
+		ImGui::SliderFloat( "perspective", &camera.fovy, 0, glm::radians( 45.0f ) );
+		ImGui::Text( "dist %f", glm::length(camera.origin) );
 		ImGui::SliderFloat( "R", &Radius, 0, 1 );
 		ImGui::SliderFloat( "Z", &Z, -3, 3 );
 		ImGui::SliderFloat( "Y", &Y, -3, 3 );

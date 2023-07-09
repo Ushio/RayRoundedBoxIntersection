@@ -65,11 +65,12 @@ bool intersectRoundedbox( glm::vec3 ro, glm::vec3 rd, glm::vec3 center, glm::vec
 	glm::vec3 distanceFromInner = glm::abs( hitLocal ) - innerWide;
 	glm::vec3 roLocal = ro - center;
 
-	float shiftT = 0.0f < tbox ? tbox - maxElement( glm::abs( rd ) ) / 65536.0f : 0.0f;
+	float shiftT = 0.0f < tbox ? tbox - maxElement( glm::abs( hitLocal ) ) / ( 65536.0f ) : 0.0f;
 	glm::vec3 roHitLocal = ro + rd * shiftT - center;
 
 	// Plane part, inclusive
-	if( minElement( glm::max( distanceFromInner, { distanceFromInner.y, distanceFromInner.z, distanceFromInner.x } ) ) <= 0.0f )
+	float eps = maxElement( glm::abs( ro ) ) * 32.0f * FLT_EPSILON;
+	if( minElement( glm::max( distanceFromInner, { distanceFromInner.y, distanceFromInner.z, distanceFromInner.x } ) ) <= eps )
 	{
 		if( 0.0f < tbox )
 		{
@@ -150,7 +151,7 @@ bool intersectRoundedbox( glm::vec3 ro, glm::vec3 rd, glm::vec3 center, glm::vec
 			bool isCorner =
 				innerWide.x < glm::abs( roHitLocal.x + rd.x * h ) &&
 				innerWide.y < glm::abs( roHitLocal.y + rd.y * h );
-			if( 0.0f < h && glm::abs( z ) < innerWide.z && isCorner /* leave only the corners */ )
+			if( 0.0f < h && glm::abs( z ) <= innerWide.z && isCorner /* leave only the corners */ )
 			{
 				t = shiftT + h;
 			}
@@ -170,7 +171,7 @@ bool intersectRoundedbox( glm::vec3 ro, glm::vec3 rd, glm::vec3 center, glm::vec
 			bool isCorner =
 				innerWide.y < glm::abs( roHitLocal.y + rd.y * h ) &&
 				innerWide.z < glm::abs( roHitLocal.z + rd.z * h );
-			if( 0.0f < h && glm::abs( x ) < innerWide.x && isCorner /* leave only the corners */ )
+			if( 0.0f < h && glm::abs( x ) <= innerWide.x && isCorner /* leave only the corners */ )
 			{
 				t = shiftT + h;
 			}
@@ -190,7 +191,7 @@ bool intersectRoundedbox( glm::vec3 ro, glm::vec3 rd, glm::vec3 center, glm::vec
 			bool isCorner =
 				innerWide.x < glm::abs( roHitLocal.x + rd.x * h ) &&
 				innerWide.z < glm::abs( roHitLocal.z + rd.z * h );
-			if( 0.0f < h && glm::abs( y ) < innerWide.y && isCorner /* leave only the corners */ )
+			if( 0.0f < h && glm::abs( y ) <= innerWide.y && isCorner /* leave only the corners */ )
 			{
 				t = shiftT + h;
 			}
@@ -350,7 +351,8 @@ int main()
 						// WARNING: It's not valid when R == 0
 						glm::vec3 p = ro + rd * t;
 						glm::vec3 dir = p - center;
-						glm::vec3 nabs = glm::max( glm::abs( dir ) - ( sizeH - glm::vec3( Radius, Radius, Radius ) ), glm::vec3( 0, 0, 0 ) );
+						float safeR = glm::max( Radius, maxElement( sizeH ) * 32.0f * FLT_EPSILON );
+						glm::vec3 nabs = glm::max( glm::abs( dir ) - ( sizeH - glm::vec3( safeR, safeR, safeR ) ), glm::vec3( 0, 0, 0 ) );
 						hitN = glm::sign( dir ) * glm::normalize( nabs );
 					}
 				}

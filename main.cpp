@@ -60,8 +60,9 @@ bool hasIntersectionBox( glm::vec3 ro, glm::vec3 one_over_rd, glm::vec3 lower, g
 // backface culled
 bool intersectRoundedbox( glm::vec3 ro, glm::vec3 rd, glm::vec3 center, glm::vec3 WideH, float R, float* tout, float tbox )
 {
+	glm::vec3 roLocal = ro - center;
 	glm::vec3 innerWide = WideH - glm::vec3( R, R, R );
-	glm::vec3 hitLocal = ( ro + rd * tbox - center );
+	glm::vec3 hitLocal = ( roLocal + rd * tbox );
 	glm::vec3 distanceFromInner = glm::abs( hitLocal ) - innerWide;
 
 	// Plane part, inclusive
@@ -85,7 +86,7 @@ bool intersectRoundedbox( glm::vec3 ro, glm::vec3 rd, glm::vec3 center, glm::vec
 			copysignf( innerWide.z, hitLocal.z ),
 		};
 
-	glm::vec3 rpo = ro - ( oLocal + center );
+	glm::vec3 rpo = roLocal - oLocal;
 
 	float R2 = R * R;
 	glm::vec3 rpo2 = rpo * rpo;
@@ -142,16 +143,16 @@ bool intersectRoundedbox( glm::vec3 ro, glm::vec3 rd, glm::vec3 center, glm::vec
 		if( 0.0f < D )
 		{
 			float h = ( -b - sqrtf( D ) ) / a;
-			float z = ro.z + rd.z * h;
+			float z = roLocal.z + rd.z * h;
 			bool isCorner =
-				innerWide.x < glm::abs( ro.x + rd.x * h - center.x ) &&
-				innerWide.y < glm::abs( ro.y + rd.y * h - center.y );
-			if( 0.0f < h && glm::abs( z - center.z ) < innerWide.z && isCorner /* leave only the corners */ )
+				innerWide.x < glm::abs( roLocal.x + rd.x * h ) &&
+				innerWide.y < glm::abs( roLocal.y + rd.y * h );
+			if( 0.0f < h && glm::abs( z ) < innerWide.z && isCorner /* leave only the corners */ )
 			{
 				t = h;
 			}
 
-			flipper.z = glm::sign( z - center.z ) * glm::sign( oLocal.z );
+			flipper.z = glm::sign( z ) * glm::sign( oLocal.z );
 		}
 	}
 	{ // YZ
@@ -162,16 +163,16 @@ bool intersectRoundedbox( glm::vec3 ro, glm::vec3 rd, glm::vec3 center, glm::vec
 		if( 0.0f < D )
 		{
 			float h = ( -b - sqrtf( D ) ) / a;
-			float x = ro.x + rd.x * h;
+			float x = roLocal.x + rd.x * h;
 			bool isCorner =
-				innerWide.y < glm::abs( ro.y + rd.y * h - center.y ) &&
-				innerWide.z < glm::abs( ro.z + rd.z * h - center.z );
-			if( 0.0f < h && glm::abs( x - center.x ) < innerWide.x && isCorner /* leave only the corners */ )
+				innerWide.y < glm::abs( roLocal.y + rd.y * h ) &&
+				innerWide.z < glm::abs( roLocal.z + rd.z * h );
+			if( 0.0f < h && glm::abs( x ) < innerWide.x && isCorner /* leave only the corners */ )
 			{
 				t = h;
 			}
 
-			flipper.x = glm::sign( x - center.x ) * glm::sign( oLocal.x );
+			flipper.x = glm::sign( x ) * glm::sign( oLocal.x );
 		}
 	}
 	{ // ZX
@@ -182,20 +183,20 @@ bool intersectRoundedbox( glm::vec3 ro, glm::vec3 rd, glm::vec3 center, glm::vec
 		if( 0.0f < D )
 		{
 			float h = ( -b - sqrtf( D ) ) / a;
-			float y = ro.y + rd.y * h;
+			float y = roLocal.y + rd.y * h;
 			bool isCorner =
-				innerWide.x < glm::abs( ro.x + rd.x * h - center.x ) &&
-				innerWide.z < glm::abs( ro.z + rd.z * h - center.z );
-			if( 0.0f < h && glm::abs( y - center.y ) < innerWide.y && isCorner /* leave only the corners */ )
+				innerWide.x < glm::abs( roLocal.x + rd.x * h ) &&
+				innerWide.z < glm::abs( roLocal.z + rd.z * h );
+			if( 0.0f < h && glm::abs( y ) < innerWide.y && isCorner /* leave only the corners */ )
 			{
 				t = h;
 			}
-			flipper.y = glm::sign( y - center.y ) * glm::sign( oLocal.y );
+			flipper.y = glm::sign( y ) * glm::sign( oLocal.y );
 		}
 	}
 
 	{ // corner sphere 
-		glm::vec3 rpo = ro - ( oLocal * flipper + center );
+		glm::vec3 rpo = roLocal - oLocal * flipper;
 
 		glm::vec3 rpo2 = rpo * rpo;
 		glm::vec3 rpoxrd2 = rpo * rd;
@@ -207,7 +208,7 @@ bool intersectRoundedbox( glm::vec3 ro, glm::vec3 rd, glm::vec3 center, glm::vec
 		if( 0.0f < D )
 		{
 			float h = ( -b - sqrtf( D ) ) / a;
-			glm::vec3 p = ro + rd * h - center;
+			glm::vec3 p = roLocal + rd * h;
 			if( 0.0f < h && 0.0f <= minElement( glm::abs( p ) - innerWide ) /* leave only the corners, inclusive */ )
 			{
 				t = h;
